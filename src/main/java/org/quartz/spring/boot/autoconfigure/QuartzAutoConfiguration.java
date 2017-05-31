@@ -60,8 +60,11 @@ public class QuartzAutoConfiguration {
         // 自定义整合属性
         factory.setDataSource(getDataSource(applicationContext));
 
-        // TODO 定义回调接口允许在其它位置操作 SchedulerFactoryBean、QuartzProperties
-
+        // 回调接口允许在其它位置操作 SchedulerFactoryBean、QuartzProperties
+        CustomSchedulerFactoryBean customSchedulerFactoryBean = getCustomSchedulerFactoryBean(applicationContext);
+        if (customSchedulerFactoryBean != null) {
+            factory = customSchedulerFactoryBean.custom(factory, quartzProperties);
+        }
         logger.info("Created SchedulerFactoryBean!");
         return factory;
     }
@@ -84,5 +87,20 @@ public class QuartzAutoConfiguration {
             throw new BeanInitializationException("Quartz数据源获取失败");
         }
         return dataSource;
+    }
+
+    /**
+     * 获取CustomSchedulerFactoryBean实现对象
+     */
+    private CustomSchedulerFactoryBean getCustomSchedulerFactoryBean(ApplicationContext applicationContext) {
+        Map<String, CustomSchedulerFactoryBean> customSchedulerFactoryBeanMap = applicationContext.getBeansOfType(CustomSchedulerFactoryBean.class);
+        if (customSchedulerFactoryBeanMap == null || customSchedulerFactoryBeanMap.size() <= 0) {
+            logger.info("没有自定义SchedulerFactoryBean");
+            return null;
+        }
+        if (customSchedulerFactoryBeanMap.size() > 1) {
+            throw new RuntimeException("不支持多个CustomSchedulerFactoryBean,当前数量[" + customSchedulerFactoryBeanMap.size() + "]");
+        }
+        return customSchedulerFactoryBeanMap.values().iterator().next();
     }
 }
